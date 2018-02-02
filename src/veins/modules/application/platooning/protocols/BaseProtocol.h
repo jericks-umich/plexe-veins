@@ -27,163 +27,171 @@
 
 #include "veins/modules/application/platooning/utilities/BasePositionHelper.h"
 
-//maximum number of upper layer apps that can connect (see .ned file)
+// maximum number of upper layer apps that can connect (see .ned file)
 #define MAX_GATES_COUNT 10
 
 class BaseProtocol : public BaseApplLayer {
 
-	private:
+private:
+  // signals for busy channel and collisions
+  static const simsignalwrap_t sigChannelBusy;
+  static const simsignalwrap_t sigCollision;
 
-		//signals for busy channel and collisions
-		static const simsignalwrap_t sigChannelBusy;
-		static const simsignalwrap_t sigCollision;
+  // amount of time channel has been observed busy during the last
+  // "statisticsPeriod" seconds
+  SimTime busyTime;
+  // count the number of collision at the phy layer
+  int nCollisions;
+  // time at which channel turned busy
+  SimTime startBusy;
+  // indicates whether channel is busy or not
+  bool channelBusy;
 
-		//amount of time channel has been observed busy during the last "statisticsPeriod" seconds
-		SimTime busyTime;
-		//count the number of collision at the phy layer
-		int nCollisions;
-		//time at which channel turned busy
-		SimTime startBusy;
-		//indicates whether channel is busy or not
-		bool channelBusy;
+  // record the delay between each pair of messages received from leader and car
+  // in front
+  SimTime lastLeaderMsgTime;
+  SimTime lastFrontMsgTime;
 
-		//record the delay between each pair of messages received from leader and car in front
-		SimTime lastLeaderMsgTime;
-		SimTime lastFrontMsgTime;
+  // own id for statistics
+  cOutVector nodeIdOut;
 
-		//own id for statistics
-		cOutVector nodeIdOut;
+  // output vectors for busy time and collisions
+  cOutVector busyTimeOut, collisionsOut;
 
-		//output vectors for busy time and collisions
-		cOutVector busyTimeOut, collisionsOut;
+  // output vector for delays
+  cOutVector leaderDelayIdOut, frontDelayIdOut, leaderDelayOut, frontDelayOut;
 
-		//output vector for delays
-		cOutVector leaderDelayIdOut, frontDelayIdOut, leaderDelayOut, frontDelayOut;
+protected:
+  // determines position and role of each vehicle
+  BasePositionHelper *positionHelper;
 
-	protected:
+  // id of this vehicle
+  int myId;
+  // sequence number of sent messages
+  int seq_n;
 
-		//determines position and role of each vehicle
-		BasePositionHelper *positionHelper;
+  // beaconing interval (i.e., update frequency)
+  SimTime beaconingInterval;
+  // priority used for messages (i.e., the access category)
+  int priority;
+  // packet size of the platooning message
+  int packetSize;
+  // determine whether to send the actual acceleration or the one just computed
+  // by the controller
+  bool useControllerAcceleration;
 
-		//id of this vehicle
-		int myId;
-		//sequence number of sent messages
-		int seq_n;
+  // input/output gates from/to upper layer
+  int upperControlIn, upperControlOut, lowerLayerIn, lowerLayerOut;
+  // id range of input gates from upper layer
+  int minUpperId, maxUpperId;
 
-		//beaconing interval (i.e., update frequency)
-		SimTime beaconingInterval;
-		//priority used for messages (i.e., the access category)
-		int priority;
-		//packet size of the platooning message
-		int packetSize;
-		//determine whether to send the actual acceleration or the one just computed by the controller
-		bool useControllerAcceleration;
+  // registered upper layer applications. this is a mapping between
+  // beacon id inside packets coming from upper layer and the gate they
+  // the application is connected to. convention: id, from app, to app
+  typedef cGate OutputGate;
+  typedef cGate InputGate;
+  typedef std::pair<InputGate *, OutputGate *> AppInOut;
+  typedef std::vector<AppInOut> AppList;
+  typedef std::map<int, AppList> ApplicationMap;
+  ApplicationMap apps;
+  // number of gates from the array used
+  int usedGates;
+  // maps of already existing connections
+  typedef cGate ThisGate;
+  typedef cGate OtherGate;
+  typedef std::map<OtherGate *, ThisGate *> GateConnections;
+  GateConnections connections;
 
-		//input/output gates from/to upper layer
-		int upperControlIn, upperControlOut, lowerLayerIn, lowerLayerOut;
-		//id range of input gates from upper layer
-		int minUpperId, maxUpperId;
+  // messages for scheduleAt
+  cMessage *sendBeacon, *recordData;
 
-		//registered upper layer applications. this is a mapping between
-		//beacon id inside packets coming from upper layer and the gate they
-		//the application is connected to. convention: id, from app, to app
-		typedef cGate OutputGate;
-		typedef cGate InputGate;
-		typedef std::pair<InputGate*, OutputGate*> AppInOut;
-		typedef std::vector<AppInOut> AppList;
-		typedef std::map<int, AppList> ApplicationMap;
-		ApplicationMap apps;
-		//number of gates from the array used
-		int usedGates;
-		//maps of already existing connections
-		typedef cGate ThisGate;
-		typedef cGate OtherGate;
-		typedef std::map<OtherGate*, ThisGate*> GateConnections;
-		GateConnections connections;
+  /**
+   * NB: this method must be overridden by inheriting classes, BUT THEY MUST
+   * invoke the super class
+   * method prior processing the message. For example, the start communication
+   * event is handled by the
+   * BaseProtocol which then calls the startCommunications method. Also
+   * statistics are handled
+   * by BaseProtocol and are recorder periodically.
+   */
+  virtual void handleSelfMsg(cMessage *msg);
 
-		//messages for scheduleAt
-		cMessage *sendBeacon, *recordData;
+  // TODO: implement method and pass info to upper layer (bogus platooning) as
+  // it is (msg)
+  virtual void handleLowerMsg(cMessage *msg);
 
-		/**
-		 * NB: this method must be overridden by inheriting classes, BUT THEY MUST invoke the super class
-		 * method prior processing the message. For example, the start communication event is handled by the
-		 * BaseProtocol which then calls the startCommunications method. Also statistics are handled
-		 * by BaseProtocol and are recorder periodically.
-		 */
-		virtual void handleSelfMsg(cMessage *msg);
+  // handle unicast messages coming from above layers
+  virtual void handleUpperMsg(cMessage *msg);
 
-		//TODO: implement method and pass info to upper layer (bogus platooning) as it is (msg)
-		virtual void handleLowerMsg(cMessage *msg);
+  // handle control messages coming from above
+  virtual void handleUpperControl(cMessage *msg);
 
-		//handle unicast messages coming from above layers
-		virtual void handleUpperMsg(cMessage *msg);
+  // handle control messages coming from below
+  virtual void handleLowerControl(cMessage *msg);
 
-		//handle control messages coming from above
-		virtual void handleUpperControl(cMessage *msg);
+  // handles and application layer message
+  void handleUnicastMsg(UnicastMessage *unicast);
 
-		//handle control messages coming from below
-		virtual void handleLowerControl(cMessage *msg);
+  // override handleMessage to manager upper layer gate array
+  virtual void handleMessage(cMessage *msg);
 
-		//handles and application layer message
-		void handleUnicastMsg(UnicastMessage *unicast);
+  // signal handler
+  void receiveSignal(cComponent *source, simsignal_t signalID, bool v,
+                     cObject *details);
+  void receiveSignal(cComponent *source, simsignal_t signalID, bool v) {
+    receiveSignal(source, signalID, v, 0);
+  }
 
-		//override handleMessage to manager upper layer gate array
-		virtual void handleMessage(cMessage *msg);
+  /**
+   * Sends a platooning message with all information about the car. This is an
+   * utility function for
+   * subclasses
+   */
+  void sendPlatooningMessage(int destinationAddress);
 
-		//signal handler
-		void receiveSignal(cComponent *source, simsignal_t signalID, bool v, cObject *details);
-		void receiveSignal(cComponent *source, simsignal_t signalID, bool v) {
-			receiveSignal(source, signalID, v, 0);
-		}
+  /**
+   * This method must be overridden by subclasses to take decisions
+   * about what to do.
+   * Passed packet MUST NOT be freed, but just be read. Freeing is a duty of the
+   * superclass
+   *
+   * \param pkt the platooning beacon
+   * \param unicast the original unicast packet which was containing pkt
+   */
+  virtual void messageReceived(PlatooningBeacon *pkt, UnicastMessage *unicast);
 
-		/**
-		 * Sends a platooning message with all information about the car. This is an utility function for
-		 * subclasses
-		 */
-		void sendPlatooningMessage(int destinationAddress);
+  /**
+   * These methods signal changes in channel busy status to subclasses
+   * or occurrences of collisions.
+   * Subclasses which are interested should ovverride these methods.
+   */
+  virtual void channelBusyStart() {}
+  virtual void channelIdleStart() {}
+  virtual void collision() {}
 
-		/**
-		 * This method must be overridden by subclasses to take decisions
-		 * about what to do.
-		 * Passed packet MUST NOT be freed, but just be read. Freeing is a duty of the
-		 * superclass
-		 *
-		 * \param pkt the platooning beacon
-		 * \param unicast the original unicast packet which was containing pkt
-		 */
-		virtual void messageReceived(PlatooningBeacon *pkt, UnicastMessage *unicast);
+  // traci mobility. used for getting/setting info about the car
+  Veins::TraCIMobility *mobility;
+  Veins::TraCICommandInterface *traci;
+  Veins::TraCICommandInterface::Vehicle *traciVehicle;
 
-		/**
-		 * These methods signal changes in channel busy status to subclasses
-		 * or occurrences of collisions.
-		 * Subclasses which are interested should ovverride these methods.
-		 */
-		virtual void channelBusyStart() {}
-		virtual void channelIdleStart() {}
-		virtual void collision() {}
+public:
+  // id for beacon message
+  static const int BEACON_TYPE = 12345;
+  static const int CONTRACT_TYPE = 12346;
 
-		//traci mobility. used for getting/setting info about the car
-		Veins::TraCIMobility *mobility;
-		Veins::TraCICommandInterface *traci;
-		Veins::TraCICommandInterface::Vehicle *traciVehicle;
+  BaseProtocol() {
+    sendBeacon = 0;
+    recordData = 0;
+    usedGates = 0;
+  }
+  virtual ~BaseProtocol();
 
-	public:
+  virtual void initialize(int stage);
+  virtual void finish();
 
-		//id for beacon message
-		static const int BEACON_TYPE = 12345;
-
-		BaseProtocol() {
-			sendBeacon = 0;
-			recordData = 0;
-			usedGates = 0;
-		}
-		virtual ~BaseProtocol();
-
-		virtual void initialize(int stage);
-		virtual void finish();
-
-		//register a higher level application by its id
-		void registerApplication(int applicationId, cGate* appInputGate, cGate* appOutputGate);
+  // register a higher level application by its id
+  void registerApplication(int applicationId, cGate *appInputGate,
+                           cGate *appOutputGate);
 };
 
 #endif /* BASEPROTOCOL_H_ */

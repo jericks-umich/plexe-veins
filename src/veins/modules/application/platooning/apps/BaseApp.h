@@ -31,82 +31,78 @@
 
 class BaseProtocol;
 
-class BaseApp : public BaseApplLayer
-{
+class BaseApp : public BaseApplLayer {
 
-	public:
+public:
+  virtual void initialize(int stage);
+  virtual void finish();
 
-		virtual void initialize(int stage);
-		virtual void finish();
+protected:
+  virtual void onBeacon(WaveShortMessage *wsm);
+  virtual void onData(WaveShortMessage *wsm);
 
-	protected:
-		virtual void onBeacon(WaveShortMessage* wsm);
-		virtual void onData(WaveShortMessage* wsm);
+protected:
+  // id of this vehicle
+  int myId;
 
-	protected:
+  Veins::TraCIMobility *mobility;
+  Veins::TraCICommandInterface *traci;
+  Veins::TraCICommandInterface::Vehicle *traciVehicle;
 
-		//id of this vehicle
-		int myId;
+  // determines position and role of each vehicle
+  BasePositionHelper *positionHelper;
 
-		Veins::TraCIMobility* mobility;
-		Veins::TraCICommandInterface *traci;
-		Veins::TraCICommandInterface::Vehicle *traciVehicle;
+  // lower layer protocol
+  BaseProtocol *protocol;
 
-		//determines position and role of each vehicle
-		BasePositionHelper *positionHelper;
+  // time at which simulation should stop
+  SimTime simulationDuration;
+  // determine whether there has been a vehicle collision in the simulation.
+  // shared by all
+  static bool crashHappened;
+  // determine whether simulation correctly terminated
+  static bool simulationCompleted;
 
-		//lower layer protocol
-		BaseProtocol *protocol;
+  /**
+   * Log data about vehicle
+   */
+  virtual void logVehicleData(bool crashed = false);
 
-		//time at which simulation should stop
-		SimTime simulationDuration;
-		//determine whether there has been a vehicle collision in the simulation. shared by all
-		static bool crashHappened;
-		//determine whether simulation correctly terminated
-		static bool simulationCompleted;
+  // output vectors for mobility stats
+  // id of the vehicle
+  cOutVector nodeIdOut;
+  // distance and relative speed
+  cOutVector distanceOut, relSpeedOut;
+  // speed and position
+  cOutVector speedOut, posxOut, posyOut;
+  // real acceleration and controller acceleration
+  cOutVector accelerationOut, controllerAccelerationOut;
 
-		/**
-		 * Log data about vehicle
-		 */
-		virtual void logVehicleData(bool crashed = false);
+  // messages for scheduleAt
+  cMessage *recordData;
+  cMessage *contractChain;
 
-		//output vectors for mobility stats
-		//id of the vehicle
-		cOutVector nodeIdOut;
-		//distance and relative speed
-		cOutVector distanceOut, relSpeedOut;
-		//speed and position
-		cOutVector speedOut, posxOut, posyOut;
-		//real acceleration and controller acceleration
-		cOutVector accelerationOut, controllerAccelerationOut;
+public:
+  BaseApp() { recordData = 0; }
 
-		//messages for scheduleAt
-		cMessage *recordData;
+  /**
+   * Sends a unicast message
+   *
+   * @param msg message to be encapsulated into the unicast message
+   * @param destination id of the destination
+   */
+  void sendUnicast(cPacket *msg, int destination);
 
-	public:
-		BaseApp() {
-			recordData = 0;
-		}
+  /**
+   * Stops the simulation. Can be invoked by other classes
+   */
+  void stopSimulation();
 
-		/**
-		 * Sends a unicast message
-		 *
-		 * @param msg message to be encapsulated into the unicast message
-		 * @param destination id of the destination
-		 */
-		void sendUnicast(cPacket *msg, int destination);
-
-		/**
-		 * Stops the simulation. Can be invoked by other classes
-		 */
-		void stopSimulation();
-
-	protected:
-
-		virtual void handleLowerMsg(cMessage *msg);
-		virtual void handleSelfMsg(cMessage *msg);
-		virtual void handleLowerControl(cMessage *msg);
-
+protected:
+  virtual void handleLowerMsg(cMessage *msg);
+  virtual void handleSelfMsg(cMessage *msg);
+  virtual void handleLowerControl(cMessage *msg);
+  virtual void startNewContractChain();
 };
 
 #endif /* BASEAPP_H_ */
