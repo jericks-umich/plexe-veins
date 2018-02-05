@@ -31,76 +31,93 @@
  * In this particular example, we have 3 lanes, a platoon size of 4 vehicles
  * and 24 cars in total
  */
-class PositionHelper : public BasePositionHelper
-{
+class PositionHelper : public BasePositionHelper {
 
-	public:
+public:
+  virtual void initialize(int stage);
+  virtual void finish();
 
-		virtual void initialize(int stage);
-		virtual void finish();
+  /**
+   * Returns the position of this vehicle within the platoon
+   */
+  virtual int getPosition();
 
-		/**
-		 * Returns the position of this vehicle within the platoon
-		 */
-		virtual int getPosition();
+  /**
+   * Returns the id of the i-th vehicle of the own platoon
+   */
+  virtual int getMemberId(int position);
 
-		/**
-		 * Returns the id of the i-th vehicle of the own platoon
-		 */
-		virtual int getMemberId(int position);
+  /**
+   * Returns the position of a vehicle of the own platoon
+   */
+  virtual int getMemberPosition(int vehicleId);
 
-		/**
-		 * Returns the position of a vehicle of the own platoon
-		 */
-		virtual int getMemberPosition(int vehicleId);
+  /**
+   * Returns the id of the leader of the own platoon
+   */
+  virtual int getLeaderId();
 
-		/**
-		 * Returns the id of the leader of the own platoon
-		 */
-		virtual int getLeaderId();
+  /**
+   * Returns whether this vehicle is the leader of the platoon
+   */
+  virtual bool isLeader();
 
-		/**
-		 * Returns whether this vehicle is the leader of the platoon
-		 */
-		virtual bool isLeader();
+  /**
+   * Returns the id of the vehicle in front of me
+   */
+  virtual int getFrontId();
 
-		/**
-		 * Returns the id of the vehicle in front of me
-		 */
-		virtual int getFrontId();
+  /**
+   * Returns the id of the platoon
+   */
+  virtual int getPlatoonId();
 
-		/**
-		 * Returns the id of the platoon
-		 */
-		virtual int getPlatoonId();
+  /**
+   * Returns the lane the platoon is traveling on
+   */
+  virtual int getPlatoonLane();
 
-		/**
-		 * Returns the lane the platoon is traveling on
-		 */
-		virtual int getPlatoonLane();
+  /**
+   * Returns whether a vehicle is part of my platoon
+   */
+  virtual bool isInSamePlatoon(int vehicleId);
 
-		/**
-		 * Returns whether a vehicle is part of my platoon
-		 */
-		virtual bool isInSamePlatoon(int vehicleId);
+  /**
+   * Returns size of platoon and puts array of vehicle positions for this
+   * platoon in order. Positions are converted to uint8_t's for space reasons
+   * as it is unlikely there will be more than 256 vehicles in one platoon.
+   */
+  virtual int getPlatoonOrder(uint8_t *order, int buf_size);
+  // Like getPlatoonOrder, but populates order with a list starting with this
+  // vehicle and containing the vehicles behind it
+  virtual int getPlatoonOrderBehindMe(uint8_t *order, int buf_size);
 
-	public:
+public:
+  static int getIdFromExternalId(std::string externalId);
+  // static int getPlatoonColumn(int vehicleId, int nLanes, int platoonSize);
+  static int getPlatoonColumn(int vehicleId, int nLanes);
+  // static int getPlatoonLeader(int vehicleId, int nLanes, int platoonSize);
+  static int getPlatoonLeader(int vehicleId, int nLanes);
+  static int getPlatoonLane(int vehicleId, int nLanes);
+  // static int getPlatoonNumber(int vehicleId, int nLanes, int platoonSize);
+  static int getPlatoonNumber(int vehicleId, int nLanes);
+  // static int getFrontVehicle(int vehicleId, int nLanes, int platoonSize);
+  static int getFrontVehicle(int vehicleId, int nLanes);
+  static int getBehindVehicle(int vehicleId, int nLanes, int platoonSize);
+  // static bool isLeader(int vehicleId, int nLanes, int platoonSize);
+  static bool isLeader(int vehicleId, int nLanes);
+  // static int getPositionInPlatoon(int vehicleId, int nLanes, int
+  // platoonSize);
+  static int getPositionInPlatoon(int vehicleId, int nLanes);
+  // static bool isFrontVehicle(int vehicleId, int myId, int nLanes,
+  //                           int platoonSize);
+  static bool isFrontVehicle(int vehicleId, int myId, int nLanes);
+  // static bool isInSamePlatoon(int vehicleId, int myId, int nLanes,
+  //                            int platoonSize);
+  static bool isInSamePlatoon(int vehicleId, int myId, int nLanes);
 
-		static int getIdFromExternalId(std::string externalId);
-		static int getPlatoonColumn(int vehicleId, int nLanes, int platoonSize);
-		static int getPlatoonLeader(int vehicleId, int nLanes, int platoonSize);
-		static int getPlatoonLane(int vehicleId, int nLanes);
-		static int getPlatoonNumber(int vehicleId, int nLanes, int platoonSize);
-		static int getFrontVehicle(int vehicleId, int nLanes, int platoonSize);
-		static bool isLeader(int vehicleId, int nLanes, int platoonSize);
-		static int getPositionInPlatoon(int vehicleId, int nLanes, int platoonSize);
-		static bool isFrontVehicle(int vehicleId, int myId, int nLanes, int platoonSize);
-		static bool isInSamePlatoon(int vehicleId, int myId, int nLanes, int platoonSize);
-
-	public:
-		PositionHelper() : BasePositionHelper() {
-		}
-
+public:
+  PositionHelper() : BasePositionHelper() {}
 };
 
 #endif
