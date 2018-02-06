@@ -52,6 +52,19 @@ void BaseApp::initialize(int stage) {
     // vehicle acceleration
     accelerationOut.setName("acceleration");
     controllerAccelerationOut.setName("controllerAcceleration");
+    // enclave defaults
+    contract_changed = false; // first contract will use default values, id of 0
+    recovery_phase_duration = par("recoveryPhaseDuration").longValue();
+    recovery_chain_completion_deadline =
+        par("recoveryChainCompletionDeadline").longValue();
+    upper_speed = par("upperSpeed").doubleValue();
+    lower_speed = par("lowerSpeed").doubleValue();
+    upper_accel = par("upperAccel").doubleValue();
+    lower_accel = par("lowerAccel").doubleValue();
+    max_decel = par("maxDecel").doubleValue();
+    contract_id = 0;
+    seq_num = 0;
+    contract_type = COMMPACT_NORMAL;
   }
 
   if (stage == 1) {
@@ -59,7 +72,7 @@ void BaseApp::initialize(int stage) {
     traci = mobility->getCommandInterface();
     traciVehicle = mobility->getVehicleCommandInterface();
     positionHelper =
-        FindModule<BasePositionHelper *>::findSubModule(getParentModule());
+        FindModule<PositionHelper *>::findSubModule(getParentModule());
     protocol = FindModule<BaseProtocol *>::findSubModule(getParentModule());
     myId = positionHelper->getId();
 
@@ -82,10 +95,9 @@ void BaseApp::initialize(int stage) {
     // and ignored.
     if (positionHelper->isLeader()) {
       contractChain = new cMessage("contractChain");
-      SimTime startContractChain =
-          SimTime(floor(simTime().dbl() * 1000) +
-                      par("recoveryPhaseDuration").longValue(),
-                  SIMTIME_MS);
+      SimTime startContractChain = SimTime(
+          floor(simTime().dbl() * 1000) + recovery_chain_completion_deadline,
+          SIMTIME_MS);
       scheduleAt(startContractChain, contractChain);
     }
 
@@ -158,8 +170,48 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
                                           sizeof(struct Plexe::VEHICLE_DATA));
     }
   } else if (enc->getKind() == BaseProtocol::CONTRACT_TYPE) {
-    // TODO Jeremy
+    printf("Received Contract Packet!\n");
+    // make sure this message is still valid, otherwise ignore it
+    // TODO: Jeremy
+    // make sure this message is something this vehicle will accept (i.e. is
+    // safe).
+    // Pass the completed contract chain to the enclave for verification and to
+    // do any updates necessary
+    // Collect timing information TODO
+    // cancel the upcoming contractChain event
+    // cancelEvent(contractChain); // if not set, nothing happens
+    // start a new contract chain
+    // startNewContractChain();
+    // create a new contractChain event in case the chain doesn't complete in
+    // time
+    // scheduleAt(simTime() + SimTime(par("recoveryPhaseDuration").longValue(),
+    //                               SIMTIME_MS),
+    //           contractChain);
   }
+
+  delete enc;
+  delete unicast;
+}
+
+void BaseApp::logVehicleData(bool crashed) {
+  // get distance and relative speed w.r.t. front vehicle
+  double distance, relSpeed, acceleration, speed, controllerAcceleration, posX,
+      posY, time;
+  traciVehicle->getRadarMeasurements(distance, relSpeed);
+  traciVehicle->getVehicleData(speed, acceleration, controllerAcceleration,
+                               posX, posY, time);
+  if (crashed)
+    distance = 0;
+  // write data to output files
+  distanceOut.record(distance);
+  relSpeedOut.record(relSpeed);
+  nodeIdOut.record(myId);
+  accelerationOut.record(acceleration);
+  controllerAccelerationOut.record(controllerAcceleration);
+  speedOut.record(mobility->getCurrentSpeed().x);
+  Coord pos = mobility->getPositionAt(simTime());
+  posxOut.record(pos.x);
+  posyOut.record(pos.y);
 }
 
 void BaseApp::handleLowerControl(cMessage *msg) { delete msg; }
@@ -188,12 +240,84 @@ void BaseApp::handleSelfMsg(cMessage *msg) {
     // TODO: Log a failure
     // Start a new contract chain
     startNewContractChain();
+    // Set a new event so we send out the next contract chain too
+    scheduleAt(simTime() +
+                   SimTime(recovery_chain_completion_deadline, SIMTIME_MS),
+               contractChain);
   }
 }
 
 void BaseApp::startNewContractChain() {
+  // check if we have a change to the contract, or just another chain in the
+  // existing contract
+  // NOTE: the enclave itself will check whether the contract has changed and
+  // whether the new parameters are valid or not
+  if (contract_changed) {
+    contract_id++;
+    seq_num = 0;
+  } else {
+    seq_num++;
+  }
+  contract_chain_t params;
+  params.contract_id = contract_id;
+  params.seq_num = seq_num;
+  params.sent_time = simTime().dbl();
+  params.valid_time =
+      params.sent_time +
+      SimTime(recovery_chain_completion_deadline, SIMTIME_MS).dbl();
+  params.contract_type = contract_type;
+  // set contract type-specific parameters
+  switch ((int)contract_type) {
+  case COMMPACT_NORMAL:
+    // extend the timeout
+    params.recovery_phase_timeout =
+        params.sent_time +
+        SimTime(recovery_chain_completion_deadline, SIMTIME_MS).dbl();
+    // set chain order (for normal, front to back)
+    params.chain_length = positionHelper->getPlatoonOrder(params.chain_order,
+                                                          MAX_PLATOON_VEHICLES);
+    // set speed and accel bounds
+    params.upper_speed = upper_speed;
+    params.lower_speed = lower_speed;
+    params.upper_accel = upper_accel;
+    params.lower_accel = lower_accel;
+    params.max_decel = max_decel;
+    break;
+  case COMMPACT_JOIN: // TODO: these types are not supported yet
+  case COMMPACT_LEAVE:
+  case COMMPACT_SPLIT:
+    params.recovery_phase_timeout = 0; // do not extend timeout
+    break;
+  }
+
+  // get signature from enclave
+  cp_ec256_signature_t signature;
+  commpact_status_t status = CP_SUCCESS;
+  // status = getSignatureForNewContractChain(params, &signature);
+  if (status != CP_SUCCESS) {
+    printf("Could not get enclave to sign new contract chain!\n");
+    return;
+  }
+
   // create an instance of new cPacket class
-  // TODO Jeremy
+  ContractChain *contract_chain = new ContractChain();
+  contract_chain->setKind(BaseProtocol::CONTRACT_TYPE);
+  contract_chain->setContract_chain(params);
+  int position = positionHelper->getPosition();
+  char sig_name[6];
+  snprintf(sig_name, 6, "sig_%1d", position);
+  cMsgPar par = contract_chain->addPar(sig_name);
+  // create a new instance of signature and attach it to the chain
+  ContractSignature *sig_message = new ContractSignature;
+  sig_message->setSignature(signature);
+  par.setObjectValue(sig_message);
+
+  // send contract chain down
+  UnicastMessage *unicast = new UnicastMessage();
+  unicast->setDestination(-1); // broadcast
+  unicast->encapsulate(contract_chain);
+  unicast->setKind(BaseProtocol::CONTRACT_TYPE);
+  sendDown(unicast);
 }
 
 void BaseApp::stopSimulation() {

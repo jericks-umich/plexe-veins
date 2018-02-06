@@ -22,9 +22,10 @@ if args:
 
 
 # Start with default flags
-if os.environ["CPPFLAGS"]:
+try:
+    os.environ["CPPFLAGS"]
     makemake_flags = ['-f', '--deep', '--no-deep-includes', '--make-so', '-I', '.', os.environ["CPPFLAGS"], '-o', 'veins', '-O', 'out']
-else:
+except:
     makemake_flags = ['-f', '--deep', '--no-deep-includes', '--make-so', '-I', '.', '-o', 'veins', '-O', 'out']
 run_libs = [os.path.join('src', 'veins')]
 run_neds = [os.path.join('src', 'veins')]

@@ -21,13 +21,15 @@
 #include "veins/base/modules/BaseApplLayer.h"
 
 #include "veins/modules/application/platooning/UnicastProtocol.h"
+#include "veins/modules/application/platooning/messages/ContractChain_m.h"
+#include "veins/modules/application/platooning/messages/ContractSignature_m.h"
 #include "veins/modules/application/platooning/messages/PlatooningBeacon_m.h"
 
 #include "veins/modules/mobility/traci/TraCIMobility.h"
 
 #include "veins/modules/application/platooning/CC_Const.h"
 
-#include "veins/modules/application/platooning/utilities/BasePositionHelper.h"
+#include "veins/modules/application/platooning/utilities/PositionHelper.h"
 
 class BaseProtocol;
 
@@ -50,7 +52,7 @@ protected:
   Veins::TraCICommandInterface::Vehicle *traciVehicle;
 
   // determines position and role of each vehicle
-  BasePositionHelper *positionHelper;
+  PositionHelper *positionHelper;
 
   // lower layer protocol
   BaseProtocol *protocol;
@@ -81,6 +83,21 @@ protected:
   // messages for scheduleAt
   cMessage *recordData;
   cMessage *contractChain;
+
+  // timeouts and durations
+  long recovery_phase_duration;
+  long recovery_chain_completion_deadline;
+
+  // contract parameters for next contract
+  uint32_t contract_id;
+  bool contract_changed;
+  uint32_t seq_num;
+  float contract_type;
+  float upper_speed;
+  float lower_speed;
+  float upper_accel;
+  float lower_accel;
+  float max_decel;
 
 public:
   BaseApp() { recordData = 0; }

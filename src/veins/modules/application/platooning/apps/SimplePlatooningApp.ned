@@ -25,6 +25,13 @@ simple SimplePlatooningApp like BaseApp
         int headerLength @unit("bit") = default(0 bit);
         //duration of simulation
         double simulationDuration @unit("s");
+        double recoveryChainCompletionDeadline @unit("ms");
+        double recoveryPhaseDuration @unit("ms");
+        double upperSpeed @unit("mps");
+        double lowerSpeed @unit("mps");
+        double upperAccel @unit("mpsps");
+        double lowerAccel @unit("mpsps");
+        double maxDecel @unit("mpsps");
 
         @display("i=block/app2");
         @class(SimplePlatooningApp);

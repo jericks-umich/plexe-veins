@@ -82,8 +82,11 @@ int PositionHelper::getPlatoonId() { return platoonId; }
 
 int PositionHelper::getPlatoonLane() { return platoonLane; }
 
+// bool PositionHelper::isInSamePlatoon(int vehicleId) {
+//  return platoonId == getPlatoonNumber(vehicleId, nLanes, platoonSize);
+//}
 bool PositionHelper::isInSamePlatoon(int vehicleId) {
-  return platoonId == getPlatoonNumber(vehicleId, nLanes, platoonSize);
+  return platoonId == getPlatoonNumber(vehicleId, nLanes);
 }
 
 int PositionHelper::getPlatoonOrder(uint8_t *order, int buf_size) {
@@ -91,24 +94,27 @@ int PositionHelper::getPlatoonOrder(uint8_t *order, int buf_size) {
     return -1; // can't store platoon order in this buffer
   }
   int behind_vehicle = leaderId;
-  for (int pos = 0; behind_vehicle != -1 && pos < platoonSize; pos++) {
-    order[pos] = (uint8_t)behind_vehicle;
-    behind_vehicle = getBehindVehicle(behind_vehicle);
+  int position;
+  for (position = 0; behind_vehicle != -1 && position < platoonSize;
+       position++) {
+    order[position] = (uint8_t)behind_vehicle;
+    behind_vehicle = getBehindVehicle(behind_vehicle, nLanes, platoonSize);
   }
-  return pos;
+  return position;
 }
 
-int PositionHelper::getPlatoonOrderBehindMePlusLeader(uint8_t *order,
-                                                      int buf_size) {
+int PositionHelper::getPlatoonOrderBehindMe(uint8_t *order, int buf_size) {
   if (buf_size < platoonSize) {
     return -1; // can't store platoon order in this buffer
   }
   int behind_vehicle = myId;
-  for (int pos = 0; behind_vehicle != -1 && pos < platoonSize; pos++) {
-    order[pos] = (uint8_t)behind_vehicle;
-    behind_vehicle = getBehindVehicle(behind_vehicle);
+  int position;
+  for (position = 0; behind_vehicle != -1 && position < platoonSize;
+       position++) {
+    order[position] = (uint8_t)behind_vehicle;
+    behind_vehicle = getBehindVehicle(behind_vehicle, nLanes, platoonSize);
   }
-  return pos;
+  return position;
 }
 
 int PositionHelper::getIdFromExternalId(std::string externalId) {
