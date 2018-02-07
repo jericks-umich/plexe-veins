@@ -292,9 +292,15 @@ void BaseApp::startNewContractChain() {
 
   // get signature from enclave
   cp_ec256_signature_t signature;
-  commpact_status_t status = CP_SUCCESS;
-  // status = getSignatureForNewContractChain(params, &signature);
-  if (status != CP_SUCCESS) {
+  cp_ec256_signature_t empty_signature;
+  memset((void *)&signature, 0, sizeof(cp_ec256_signature_t)); // set to zero
+  memset((void *)&empty_signature, 0,
+         sizeof(cp_ec256_signature_t)); // set to zero
+  traciVehicle->getSignatureForNewContractChain(
+      params, &signature); // signature gets populated
+  // if signature was not set (memcmp returns zero if matches empty_sig)
+  if (!memcmp((void *)&signature, (void *)&empty_signature,
+              sizeof(cp_ec256_signature_t))) {
     printf("Could not get enclave to sign new contract chain!\n");
     return;
   }
