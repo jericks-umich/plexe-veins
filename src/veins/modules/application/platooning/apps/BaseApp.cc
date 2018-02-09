@@ -170,23 +170,69 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
                                           sizeof(struct Plexe::VEHICLE_DATA));
     }
   } else if (enc->getKind() == BaseProtocol::CONTRACT_TYPE) {
-    printf("Received Contract Packet!\n");
-    // make sure this message is still valid, otherwise ignore it
-    // TODO: Jeremy
-    // make sure this message is something this vehicle will accept (i.e. is
-    // safe).
-    // Pass the completed contract chain to the enclave for verification and to
-    // do any updates necessary
-    // Collect timing information TODO
-    // cancel the upcoming contractChain event
-    // cancelEvent(contractChain); // if not set, nothing happens
-    // start a new contract chain
-    // startNewContractChain();
-    // create a new contractChain event in case the chain doesn't complete in
-    // time
-    // scheduleAt(simTime() + SimTime(par("recoveryPhaseDuration").longValue(),
-    //                               SIMTIME_MS),
-    //           contractChain);
+    // unpack ContractChain
+    ContractChain *epkt = dynamic_cast<ContractChain *>(enc);
+    ASSERT2(epkt, "received UnicastMessage does not contain a ContractChain");
+    contract_chain_t contract_chain = epkt->getContract_chain();
+    // check whether we are the intended recipient
+    if (epkt->getRecipient() == myId) {
+      printf("Vehicle %d received Contract Packet!\n", myId);
+      // make sure this message is still valid, otherwise ignore it
+      if (SimTime().dbl() < contract_chain.valid_time) {
+
+        // make sure this message is something this vehicle will accept (i.e. is
+        // safe).
+
+        // Pass the completed contract chain to the enclave for verification and
+        // to do any updates necessary
+
+        // Collect timing information TODO
+
+        // if we're the leader and just received a completed normal chain, we
+        // can start the next chain immediately
+        if (positionHelper->isLeader() &&
+            contract_chain.contract_type == COMMPACT_NORMAL &&
+            contract_chain.chain_order[contract_chain.chain_length - 1] ==
+                myId) {
+          // cancel any upcoming contractChain event
+          cancelEvent(contractChain);
+          // start a new contract chain
+          startNewContractChain();
+          // create a new contractChain event in case the chain doesn't complete
+          // in time
+          scheduleAt(simTime() + SimTime(recovery_chain_completion_deadline,
+                                         SIMTIME_MS),
+                     contractChain);
+        } else if (contract_chain
+                       .chain_order[contract_chain.chain_length - 1] == myId) {
+          // if we're not the leader ending a normal chain, but the contract
+          // ended with us (i.e. leave/split procedure)
+          printf("Check how we got here! Why is a non-leader %d the last "
+                 "recipient of this contract chain?",
+                 myId);
+        } else { // the chain has not ended yet, so we should pass it on
+                 // find who is next
+          int idx, next = -1;
+          for (idx = 0; idx < contract_chain.chain_length - 1; idx++) {
+            if (contract_chain.chain_order[idx] == myId) {
+              next = contract_chain.chain_order[idx + 1];
+              break;
+            }
+          }
+          if (next == -1) {
+            printf("Error: We did not find myId in chain_order! How did we get "
+                   "this packet?\n");
+          } else {
+            // create new ContractChain with them as recipient
+            ContractChain *new_contract_chain = new ContractChain();
+            new_contract_chain->setRecipient((unsigned char)next);
+            new_contract_chain->setContract_chain(contract_chain);
+            // send the new ContractChain
+            sendContractChain(new_contract_chain);
+          }
+        }
+      }
+    }
   }
 
   delete enc;
@@ -271,11 +317,13 @@ void BaseApp::startNewContractChain() {
   case COMMPACT_NORMAL:
     // extend the timeout
     params.recovery_phase_timeout =
-        params.sent_time +
-        SimTime(recovery_chain_completion_deadline, SIMTIME_MS).dbl();
+        params.sent_time + SimTime(recovery_phase_duration, SIMTIME_MS).dbl();
     // set chain order (for normal, front to back)
     params.chain_length = positionHelper->getPlatoonOrder(params.chain_order,
                                                           MAX_PLATOON_VEHICLES);
+    // append leader to the chain order
+    params.chain_order[params.chain_length] = myId;
+    params.chain_length++;
     // set speed and accel bounds
     params.upper_speed = upper_speed;
     params.lower_speed = lower_speed;
@@ -296,8 +344,8 @@ void BaseApp::startNewContractChain() {
   memset((void *)&signature, 0, sizeof(cp_ec256_signature_t)); // set to zero
   memset((void *)&empty_signature, 0,
          sizeof(cp_ec256_signature_t)); // set to zero
-  traciVehicle->getSignatureForNewContractChain(
-      params, &signature); // signature gets populated
+  traciVehicle->sendVehicleContractChainGetSignature(
+      params, &signature, 0, NULL); // signature gets populated
   // if signature was not set (memcmp returns zero if matches empty_sig)
   if (!memcmp((void *)&signature, (void *)&empty_signature,
               sizeof(cp_ec256_signature_t))) {
@@ -318,7 +366,18 @@ void BaseApp::startNewContractChain() {
   sig_message->setSignature(signature);
   par.setObjectValue(sig_message);
 
+  // set the recipient of this packet based on the chain_order
+  if (params.chain_length < 2) {
+    printf("Not enough vehicles in chain_order!\n");
+    return;
+  }
+  contract_chain->setRecipient(params.chain_order[1]);
+
   // send contract chain down
+  sendContractChain(contract_chain);
+}
+
+void BaseApp::sendContractChain(ContractChain *contract_chain) {
   UnicastMessage *unicast = new UnicastMessage();
   unicast->setDestination(-1); // broadcast
   unicast->encapsulate(contract_chain);

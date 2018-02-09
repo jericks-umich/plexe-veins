@@ -111,6 +111,13 @@ public:
   void sendUnicast(cPacket *msg, int destination);
 
   /**
+   * Sends a unicast contract chain message
+   *
+   * @param contract_chain message to be encapsulated into the unicast message
+   */
+  void sendContractChain(ContractChain *contract_chain);
+
+  /**
    * Stops the simulation. Can be invoked by other classes
    */
   void stopSimulation();

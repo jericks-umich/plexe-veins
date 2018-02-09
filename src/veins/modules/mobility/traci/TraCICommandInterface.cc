@@ -970,25 +970,29 @@ unsigned int TraCICommandInterface::Vehicle::getLanesCount() {
   return (unsigned int)lane;
 }
 
-void TraCICommandInterface::Vehicle::getSignatureForNewContractChain(
-    contract_chain_t contract, cp_ec256_signature_t *signature) {
-
-  TraCIBuffer buf = traci->connection.query(
-      CMD_SET_GET_VEHICLE_VARIABLE,
-      TraCIBuffer() << static_cast<uint8_t>(VAR_SET_GET_CONTRACT_SIGNATURE)
-                    << nodeId << contract);
+void TraCICommandInterface::Vehicle::sendVehicleContractChainGetSignature(
+    contract_chain_t contract, cp_ec256_signature_t *return_signature,
+    uint8_t num_signatures, cp_ec256_signature_t *signatures) {
+  TraCIBuffer tb = TraCIBuffer()
+                   << static_cast<uint8_t>(VAR_SET_GET_CONTRACT_SIGNATURE)
+                   << nodeId << contract << num_signatures;
+  for (int i = 0; i < num_signatures; i++) {
+    tb << signatures[i];
+  }
+  TraCIBuffer buf = traci->connection.query(CMD_SET_GET_VEHICLE_VARIABLE, tb);
 
   uint8_t cmdLength;
   buf >> cmdLength;
   ASSERT(cmdLength ==
-         sizeof(uint8_t) + sizeof(uint8_t) + sizeof(cp_ec256_signature_t));
+         sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) +
+             sizeof(cp_ec256_signature_t));
   uint8_t commandId;
   buf >> commandId;
   ASSERT(commandId == RESPONSE_SET_GET_VEHICLE_VARIABLE);
   uint8_t varId;
   buf >> varId;
   ASSERT(varId == VAR_SET_GET_CONTRACT_SIGNATURE);
-  buf >> *signature;
+  buf >> *return_signature;
 
   ASSERT(buf.eof());
 }

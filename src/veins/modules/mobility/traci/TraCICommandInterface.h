@@ -71,8 +71,9 @@ public:
      * Sends a new contract chain to the enclave and returns a signature on that
      * message
      */
-    void getSignatureForNewContractChain(contract_chain_t contract,
-                                         cp_ec256_signature_t *signature);
+    void sendVehicleContractChainGetSignature(
+        contract_chain_t contract, cp_ec256_signature_t *return_signature,
+        uint8_t num_signatures, cp_ec256_signature_t *signatures);
     /**
      * Sets the data about the leader of the platoon. This data is usually
      * received

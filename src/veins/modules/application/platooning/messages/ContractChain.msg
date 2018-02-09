@@ -9,6 +9,7 @@ struct contract_chain_t;
 // over the contract_chain_t object
 
 packet ContractChain {
+	unsigned char recipient;
 	contract_chain_t contract_chain;
 	//cp_ec256_signature_t sig_0; // added dynamically
 	//cp_ec256_signature_t sig_4; // added dynamically
