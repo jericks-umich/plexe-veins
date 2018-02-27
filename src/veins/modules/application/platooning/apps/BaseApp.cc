@@ -133,6 +133,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
   cPacket *enc = unicast->decapsulate();
   ASSERT2(enc, "received a UnicastMessage with nothing inside");
 
+  bool delete_enc = true;
   if (enc->getKind() == BaseProtocol::BEACON_TYPE) {
 
     PlatooningBeacon *epkt = dynamic_cast<PlatooningBeacon *>(enc);
@@ -174,21 +175,21 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
     ContractChain *epkt = dynamic_cast<ContractChain *>(enc);
     ASSERT2(epkt, "received UnicastMessage does not contain a ContractChain");
     contract_chain_t contract_chain = epkt->getContract_chain();
-    printf("epkt recipient: %d\n", epkt->getRecipient());
-    printf("contract id: %u\n", contract_chain.contract_id);
-    printf("seq_num: %u\n", contract_chain.seq_num);
-    printf("sent_time: %f\n", contract_chain.sent_time);
-    printf("valid_time: %f\n", contract_chain.valid_time);
-    printf("recovery_phase_timeout: %f\n",
-           contract_chain.recovery_phase_timeout);
-    printf("chain_length: %u\n", contract_chain.chain_length);
-    uint8_t *co = contract_chain.chain_order;
-    printf("order: %u %u %u %u %u %u %u %u %u\n", co[0], co[1], co[2], co[3],
-           co[4], co[5], co[6], co[7], co[8]);
-    printf("speeds, accels, max decel: %f %f, %f %f, %f\n",
-           contract_chain.upper_speed, contract_chain.lower_speed,
-           contract_chain.upper_accel, contract_chain.lower_accel,
-           contract_chain.max_decel);
+    // printf("epkt recipient: %d\n", epkt->getRecipient());
+    // printf("contract id: %u\n", contract_chain.contract_id);
+    // printf("seq_num: %u\n", contract_chain.seq_num);
+    // printf("sent_time: %f\n", contract_chain.sent_time);
+    // printf("valid_time: %f\n", contract_chain.valid_time);
+    // printf("recovery_phase_timeout: %f\n",
+    //       contract_chain.recovery_phase_timeout);
+    // printf("chain_length: %u\n", contract_chain.chain_length);
+    // uint8_t *co = contract_chain.chain_order;
+    // printf("order: %u %u %u %u %u %u %u %u %u\n", co[0], co[1], co[2], co[3],
+    //       co[4], co[5], co[6], co[7], co[8]);
+    // printf("speeds, accels, max decel: %f %f, %f %f, %f\n",
+    //       contract_chain.upper_speed, contract_chain.lower_speed,
+    //       contract_chain.upper_accel, contract_chain.lower_accel,
+    //       contract_chain.max_decel);
     // check whether we are the intended recipient
     if (epkt->getRecipient() == myId) {
       printf("Vehicle %d received Contract Packet!\n", myId);
@@ -228,7 +229,8 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
                       "Attached signature is not of type ContractSignature");
             }
             signatures[i] = sig_ref->getSignature();
-            printf("Got %s: %x\n", sig_name, *(unsigned int *)&signatures[i]);
+            // printf("Got %s: %x\n", sig_name, *(unsigned int
+            // *)&signatures[i]);
           }
         }
 
@@ -239,9 +241,9 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
         cp_ec256_signature_t empty_signature;
         memset((void *)&new_signature, 0, sizeof(cp_ec256_signature_t));
         memset((void *)&empty_signature, 0, sizeof(cp_ec256_signature_t));
-        printf(
-            "Sending existing contract to vehicle %d enclave for signature\n",
-            myId);
+        // printf(
+        //    "Sending existing contract to vehicle %d enclave for signature\n",
+        //    myId);
         traciVehicle->sendVehicleContractChainGetSignature(
             contract_chain, &new_signature, MAX_PLATOON_VEHICLES,
             signatures); // new_signature gets populated
@@ -251,7 +253,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
           printf("Could not get enclave to sign new contract chain!\n");
           return;
         }
-        printf("Got signature: 0x%x\n", *(unsigned int *)&new_signature);
+        // printf("Got signature: 0x%x\n", *(unsigned int *)&new_signature);
 
         // Collect timing information TODO
 
@@ -266,8 +268,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
           // start a new contract chain
           startNewContractChain();
           // create a new contractChain event in case the chain doesn't
-          // complete
-          // in time
+          // complete in time
           scheduleAt(simTime() + SimTime(recovery_chain_completion_deadline,
                                          SIMTIME_MS),
                      contractChain);
@@ -294,10 +295,35 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             printf("Error: We did not find myId in chain_order! How did we get "
                    "this packet?\n");
           } else {
-            // create new ContractChain with them as recipient
+            //// create new ContractChain with them as recipient
             // ContractChain *new_contract_chain = new ContractChain();
             // new_contract_chain->setRecipient((unsigned char)next);
             // new_contract_chain->setContract_chain(contract_chain);
+            // ContractSignature *sig_message;
+            //// add all previous signatures to the new contract chain
+            // for (int i = 0; i < MAX_PLATOON_VEHICLES; i++) {
+            //  snprintf(sig_name, 6, "sig_%1d", i);
+            //  // try to get sig_%1d from epkt
+            //  obj_ref = arr.get(sig_name);
+            //  if (obj_ref != NULL) {    // if the i'th signature was attached
+            //    epkt->addPar(sig_name); // attach it here as well
+            //    // create a new instance of signature and attach it to the
+            //    chain
+            //    sig_message = new ContractSignature;
+            //    sig_message->setSignature(signatures[i]);
+            //    epkt->par(sig_name).setObjectValue(sig_message);
+            //  }
+            //}
+            //// add our new signature to the contract chain
+            // int position = positionHelper->getPosition();
+            // snprintf(sig_name, 6, "sig_%1d", position);
+            // epkt->addPar(sig_name);
+            //// create a new instance of signature and attach it to the chain
+            // sig_message = new ContractSignature;
+            // sig_message->setSignature(new_signature);
+            // epkt->par(sig_name).setObjectValue(sig_message);
+            //// send the new ContractChain
+            // sendContractChain(epkt);
 
             // reuse existing ContractChain after appending the new signature
             int position = positionHelper->getPosition();
@@ -310,13 +336,16 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             // send the new ContractChain
             epkt->setRecipient((unsigned char)next);
             sendContractChain(epkt);
+            delete_enc = false;
           }
         }
       }
     }
   }
 
-  delete enc;
+  if (delete_enc) {
+    delete enc;
+  }
   delete unicast;
 }
 
@@ -427,7 +456,7 @@ void BaseApp::startNewContractChain() {
          sizeof(cp_ec256_signature_t)); // set to zero
   memset((void *)&empty_signature, 0,
          sizeof(cp_ec256_signature_t)); // set to zero
-  printf("Sending new contract to vehicle %d enclave for signature\n", myId);
+  // printf("Sending new contract to vehicle %d enclave for signature\n", myId);
   traciVehicle->sendVehicleContractChainGetSignature(
       params, &new_signature, 0, NULL); // new_signature gets populated
   // if signature was not set (memcmp returns zero if matches empty_sig)
@@ -436,7 +465,7 @@ void BaseApp::startNewContractChain() {
     printf("Could not get enclave to sign new contract chain!\n");
     return;
   }
-  printf("Got signature: 0x%x\n", *(unsigned int *)&new_signature);
+  // printf("Got signature: 0x%x\n", *(unsigned int *)&new_signature);
 
   // create an instance of new cPacket class
   ContractChain *contract_chain = new ContractChain();

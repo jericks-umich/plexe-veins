@@ -984,7 +984,7 @@ void TraCICommandInterface::Vehicle::sendVehicleContractChainGetSignature(
   for (int i = 0; i < num_signatures; i++) {
     tb << signatures[i];
   }
-  printf("%s\n", tb.hexStr().c_str());
+  // printf("%s\n", tb.hexStr().c_str());
   TraCIBuffer buf = traci->connection.query(CMD_SET_GET_VEHICLE_VARIABLE, tb);
 
   uint8_t cmdLength;
