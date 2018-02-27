@@ -976,9 +976,15 @@ void TraCICommandInterface::Vehicle::sendVehicleContractChainGetSignature(
   TraCIBuffer tb = TraCIBuffer()
                    << static_cast<uint8_t>(VAR_SET_GET_CONTRACT_SIGNATURE)
                    << nodeId << contract << num_signatures;
+  // unsigned char *buf_ptr = (unsigned char *)signatures;
+  // for (size_t i = 0; i < num_signatures * sizeof(cp_ec256_signature_t); i++)
+  // {
+  //  tb.write<unsigned char>(buf_ptr[i]);
+  //}
   for (int i = 0; i < num_signatures; i++) {
     tb << signatures[i];
   }
+  printf("%s\n", tb.hexStr().c_str());
   TraCIBuffer buf = traci->connection.query(CMD_SET_GET_VEHICLE_VARIABLE, tb);
 
   uint8_t cmdLength;

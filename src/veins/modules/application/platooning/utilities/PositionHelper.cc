@@ -176,7 +176,7 @@ int PositionHelper::getBehindVehicle(int vehicleId, int nLanes,
   if (vehicleId + nLanes > platoonSize) {
     return -1;
   } else {
-    return vehicleId - nLanes;
+    return vehicleId + nLanes;
   }
 }
 // bool PositionHelper::isInSamePlatoon(int vehicleId, int myId, int nLanes,
