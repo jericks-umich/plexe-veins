@@ -972,7 +972,8 @@ unsigned int TraCICommandInterface::Vehicle::getLanesCount() {
 
 void TraCICommandInterface::Vehicle::sendVehicleContractChainGetSignature(
     contract_chain_t contract, cp_ec256_signature_t *return_signature,
-    uint8_t num_signatures, cp_ec256_signature_t *signatures) {
+    uint8_t num_signatures, cp_ec256_signature_t *signatures,
+    double *compute_time) {
   TraCIBuffer tb = TraCIBuffer()
                    << static_cast<uint8_t>(VAR_SET_GET_CONTRACT_SIGNATURE)
                    << nodeId << contract << num_signatures;
@@ -991,7 +992,7 @@ void TraCICommandInterface::Vehicle::sendVehicleContractChainGetSignature(
   buf >> cmdLength;
   ASSERT(cmdLength ==
          sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint8_t) +
-             sizeof(cp_ec256_signature_t));
+             sizeof(cp_ec256_signature_t) + sizeof(double));
   uint8_t commandId;
   buf >> commandId;
   ASSERT(commandId == RESPONSE_SET_GET_VEHICLE_VARIABLE);
@@ -999,6 +1000,7 @@ void TraCICommandInterface::Vehicle::sendVehicleContractChainGetSignature(
   buf >> varId;
   ASSERT(varId == VAR_SET_GET_CONTRACT_SIGNATURE);
   buf >> *return_signature;
+  buf >> *compute_time;
 
   ASSERT(buf.eof());
 }

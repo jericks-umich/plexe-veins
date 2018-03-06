@@ -53,6 +53,7 @@ void BaseApp::initialize(int stage) {
     accelerationOut.setName("acceleration");
     controllerAccelerationOut.setName("controllerAcceleration");
     // enclave defaults
+    contractChainDelayOut.setName("contractChainDelay");
     contract_changed = false; // first contract will use default values, id of 0
     recovery_phase_duration = par("recoveryPhaseDuration").longValue();
     recovery_chain_completion_deadline =
@@ -192,10 +193,10 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
     //       contract_chain.max_decel);
     // check whether we are the intended recipient
     if (epkt->getRecipient() == myId) {
-      printf("Vehicle %d received Contract Packet!\n", myId);
+      // printf("Vehicle %d received Contract Packet!\n", myId);
       // make sure this message is still valid, otherwise ignore it
       if (SimTime().dbl() < contract_chain.valid_time) {
-        printf("contract is still valid\n");
+        // printf("contract is still valid\n");
 
         // make sure this message is something this vehicle will accept (i.e. is
         // safe).
@@ -235,18 +236,15 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
         }
 
         // Pass the completed contract chain to the enclave for verification
-        // and
-        // to do any updates necessary
+        // and to do any updates necessary
         cp_ec256_signature_t new_signature;
         cp_ec256_signature_t empty_signature;
         memset((void *)&new_signature, 0, sizeof(cp_ec256_signature_t));
         memset((void *)&empty_signature, 0, sizeof(cp_ec256_signature_t));
-        // printf(
-        //    "Sending existing contract to vehicle %d enclave for signature\n",
-        //    myId);
+        double compute_time;
         traciVehicle->sendVehicleContractChainGetSignature(
-            contract_chain, &new_signature, MAX_PLATOON_VEHICLES,
-            signatures); // new_signature gets populated
+            contract_chain, &new_signature, MAX_PLATOON_VEHICLES, signatures,
+            &compute_time); // new_signature gets populated
         // if signature was not set (memcmp returns zero if matches empty_sig)
         if (!memcmp((void *)&new_signature, (void *)&empty_signature,
                     sizeof(cp_ec256_signature_t))) {
@@ -255,23 +253,27 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
         }
         // printf("Got signature: 0x%x\n", *(unsigned int *)&new_signature);
 
-        // Collect timing information TODO
-
         // if we're the leader and just received a completed normal chain, we
         // can start the next chain immediately
         if (positionHelper->isLeader() &&
             contract_chain.contract_type == COMMPACT_NORMAL &&
             contract_chain.chain_order[contract_chain.chain_length - 1] ==
                 myId) {
+          // record how long the last contract chain took
+          contractChainDelayOut.record(simTime().dbl() -
+                                       contract_chain.sent_time + compute_time);
+          printf("Completed contract chain took %f simulation time seconds\n",
+                 simTime().dbl() - contract_chain.sent_time + compute_time);
           // cancel any upcoming contractChain event
           cancelEvent(contractChain);
           // start a new contract chain
           startNewContractChain();
           // create a new contractChain event in case the chain doesn't
           // complete in time
-          scheduleAt(simTime() + SimTime(recovery_chain_completion_deadline,
-                                         SIMTIME_MS),
-                     contractChain);
+          scheduleAt(
+              simTime() + compute_time +
+                  SimTime(recovery_chain_completion_deadline, SIMTIME_MS),
+              contractChain);
         }
         // if we're not the leader ending a normal chain, but the contract
         // ended with us (i.e. leave/split procedure)
@@ -335,7 +337,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             epkt->par(sig_name).setObjectValue(sig_message);
             // send the new ContractChain
             epkt->setRecipient((unsigned char)next);
-            sendContractChain(epkt);
+            sendContractChain(epkt, compute_time);
             delete_enc = false;
           }
         }
@@ -400,11 +402,15 @@ void BaseApp::handleSelfMsg(cMessage *msg) {
     scheduleAt(simTime() +
                    SimTime(recovery_chain_completion_deadline, SIMTIME_MS),
                contractChain);
+  } else if (msg->getKind() == BaseProtocol::CONTRACT_TYPE) {
+    // if we got a contract_type message that's not contractChain, then it's a
+    // message we want to send down, but had to delay, so send it down now
+    sendContractChain(dynamic_cast<ContractChain *>(msg), 0.0);
   }
 }
 
 void BaseApp::startNewContractChain() {
-  printf("Starting new contract chain from vehicle %d\n", myId);
+  // printf("Starting new contract chain from vehicle %d\n", myId);
   // check if we have a change to the contract, or just another chain in the
   // existing contract
   // NOTE: the enclave itself will check whether the contract has changed and
@@ -457,8 +463,10 @@ void BaseApp::startNewContractChain() {
   memset((void *)&empty_signature, 0,
          sizeof(cp_ec256_signature_t)); // set to zero
   // printf("Sending new contract to vehicle %d enclave for signature\n", myId);
+  double compute_time;
   traciVehicle->sendVehicleContractChainGetSignature(
-      params, &new_signature, 0, NULL); // new_signature gets populated
+      params, &new_signature, 0, NULL,
+      &compute_time); // new_signature gets populated
   // if signature was not set (memcmp returns zero if matches empty_sig)
   if (!memcmp((void *)&new_signature, (void *)&empty_signature,
               sizeof(cp_ec256_signature_t))) {
@@ -488,15 +496,19 @@ void BaseApp::startNewContractChain() {
   contract_chain->setRecipient(params.chain_order[1]);
 
   // send contract chain down
-  sendContractChain(contract_chain);
+  sendContractChain(contract_chain, compute_time);
 }
 
-void BaseApp::sendContractChain(ContractChain *contract_chain) {
-  UnicastMessage *unicast = new UnicastMessage();
-  unicast->setDestination(-1); // broadcast
-  unicast->encapsulate(contract_chain);
-  unicast->setKind(BaseProtocol::CONTRACT_TYPE);
-  sendDown(unicast);
+void BaseApp::sendContractChain(ContractChain *contract_chain, double delay) {
+  if (delay == 0.0) {
+    UnicastMessage *unicast = new UnicastMessage();
+    unicast->setDestination(-1); // broadcast
+    unicast->encapsulate(contract_chain);
+    unicast->setKind(BaseProtocol::CONTRACT_TYPE);
+    sendDown(unicast);
+  } else {
+    scheduleAt(simTime().dbl() + delay, contract_chain);
+  }
 }
 
 void BaseApp::stopSimulation() {

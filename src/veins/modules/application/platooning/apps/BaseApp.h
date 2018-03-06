@@ -79,6 +79,8 @@ protected:
   cOutVector speedOut, posxOut, posyOut;
   // real acceleration and controller acceleration
   cOutVector accelerationOut, controllerAccelerationOut;
+  // time for contract chain to complete
+  cOutVector contractChainDelayOut;
 
   // messages for scheduleAt
   cMessage *recordData;
@@ -115,7 +117,7 @@ public:
    *
    * @param contract_chain message to be encapsulated into the unicast message
    */
-  void sendContractChain(ContractChain *contract_chain);
+  void sendContractChain(ContractChain *contract_chain, double delay);
 
   /**
    * Stops the simulation. Can be invoked by other classes

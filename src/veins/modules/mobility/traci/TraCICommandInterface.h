@@ -73,7 +73,8 @@ public:
      */
     void sendVehicleContractChainGetSignature(
         contract_chain_t contract, cp_ec256_signature_t *return_signature,
-        uint8_t num_signatures, cp_ec256_signature_t *signatures);
+        uint8_t num_signatures, cp_ec256_signature_t *signatures,
+        double *compute_time);
     /**
      * Sets the data about the leader of the platoon. This data is usually
      * received
