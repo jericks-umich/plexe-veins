@@ -23,8 +23,8 @@
 
 #include "veins/modules/application/platooning/protocols/BaseProtocol.h"
 
+#include "DSRC_delay.h"
 #include "commpact_types.h"
-
 bool BaseApp::crashHappened = false;
 bool BaseApp::simulationCompleted = false;
 
@@ -337,6 +337,10 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             epkt->par(sig_name).setObjectValue(sig_message);
             // send the new ContractChain
             epkt->setRecipient((unsigned char)next);
+            double DSRC_delay_time = get_delay_time(
+                BaseProtocol::CONTRACT_TYPE, position, (unsigned int)next);
+            compute_time = compute_time + DSRC_delay_time;
+
             sendContractChain(epkt, compute_time);
             delete_enc = false;
           }
@@ -494,7 +498,9 @@ void BaseApp::startNewContractChain() {
     return;
   }
   contract_chain->setRecipient(params.chain_order[1]);
-
+  double DSRC_delay_time = get_delay_time(BaseProtocol::CONTRACT_TYPE, position,
+                                          params.chain_order[1]);
+  compute_time = compute_time + DSRC_delay_time;
   // send contract chain down
   sendContractChain(contract_chain, compute_time);
 }
