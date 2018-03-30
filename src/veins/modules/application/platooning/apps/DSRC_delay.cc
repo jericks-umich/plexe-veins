@@ -26,7 +26,7 @@ unordered_map<string, unsigned int> pointer;
 double get_delay_time(string log) {
   double delay_time = delay_data[log][pointer[log]];
   pointer[log] = (pointer[log] + 1) % delay_data[log].size();
-  return delay_time;
+  return delay_time / 2;
 }
 void initialize() {
   for (int i = 0; i < DSRC_LOG_FILE_NUM; ++i) {
