@@ -20,7 +20,7 @@
 
 void initialize();
 
-double get_delay_time(int CONTRACT_TYPE, unsigned int sender,
-                      unsigned int targetReceiver);
+double getDsrcDelayTime(int CONTRACT_TYPE, unsigned int sender,
+                        unsigned int targetReceiver);
 
 #endif // UNTITLED_DSRC_DELAY_H

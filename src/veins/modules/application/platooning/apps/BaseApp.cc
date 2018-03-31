@@ -337,7 +337,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             epkt->par(sig_name).setObjectValue(sig_message);
             // send the new ContractChain
             epkt->setRecipient((unsigned char)next);
-            double DSRC_delay_time = get_delay_time(
+            double DSRC_delay_time = getDsrcDelayTime(
                 BaseProtocol::CONTRACT_TYPE, position, (unsigned int)next);
             compute_time = compute_time + DSRC_delay_time;
             if (DSRC_delay_time > 0) {
@@ -499,8 +499,8 @@ void BaseApp::startNewContractChain() {
     return;
   }
   contract_chain->setRecipient(params.chain_order[1]);
-  double DSRC_delay_time = get_delay_time(BaseProtocol::CONTRACT_TYPE, position,
-                                          params.chain_order[1]);
+  double DSRC_delay_time = getDsrcDelayTime(BaseProtocol::CONTRACT_TYPE,
+                                            position, params.chain_order[1]);
   compute_time = compute_time + DSRC_delay_time;
   // send contract chain down
   if (DSRC_delay_time > 0) {
