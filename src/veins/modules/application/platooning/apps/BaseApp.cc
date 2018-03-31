@@ -340,8 +340,9 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             double DSRC_delay_time = get_delay_time(
                 BaseProtocol::CONTRACT_TYPE, position, (unsigned int)next);
             compute_time = compute_time + DSRC_delay_time;
-
-            sendContractChain(epkt, compute_time);
+            if (DSRC_delay_time > 0) {
+              sendContractChain(epkt, compute_time);
+            }
             delete_enc = false;
           }
         }
@@ -502,7 +503,9 @@ void BaseApp::startNewContractChain() {
                                           params.chain_order[1]);
   compute_time = compute_time + DSRC_delay_time;
   // send contract chain down
-  sendContractChain(contract_chain, compute_time);
+  if (DSRC_delay_time > 0) {
+    sendContractChain(contract_chain, compute_time);
+  }
 }
 
 void BaseApp::sendContractChain(ContractChain *contract_chain, double delay) {
