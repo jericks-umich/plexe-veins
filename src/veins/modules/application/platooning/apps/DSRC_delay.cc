@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 using namespace std;
@@ -36,6 +37,11 @@ void initialize() {
     infile.open(file_name.c_str());
     double dummy;
     if (!infile) {
+      char buffer[256];
+      if (NULL == getcwd(buffer, sizeof(buffer))) {
+        printf("can't get current dir\n");
+      }
+      printf("current directory: %s", buffer);
       cerr << "Read dsrc error: " << file_name;
       exit(1);
     }

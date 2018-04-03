@@ -5,7 +5,7 @@
 #ifndef DSRC_DELAY_H
 #define DSRC_DELAY_H
 
-#define DSRC_LOG_FOLDER "results"
+#define DSRC_LOG_FOLDER "/tmp/results"
 #define DSRC_LOG_FILE_NUM 10
 #define ONE_SIGNATURE_SHORT_DELAY_LOG "1000_128_short.log"
 #define ONE_SIGNATURE_LONG_DELAY_LOG "1000_128_long.log"
