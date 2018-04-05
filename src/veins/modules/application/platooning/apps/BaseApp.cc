@@ -23,10 +23,98 @@
 
 #include "veins/modules/application/platooning/protocols/BaseProtocol.h"
 
-#include "DSRC_delay.h"
 #include "commpact_types.h"
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+
+using namespace std;
 bool BaseApp::crashHappened = false;
 bool BaseApp::simulationCompleted = false;
+bool initialized = false;
+
+/* clang-format off */
+/*
+																|- Short range - (data)
+																|
+						|-- one signature --|
+						|                   |- Long range - (data)
+delay log - |
+						|-- two signatures
+						|
+						|-- three signatures
+						|     ....
+						|--   ....
+
+
+*/
+/* clang-format on */
+vector<vector<vector<double>>> delay_data;
+vector<vector<unsigned int>> pointer;
+
+// invariant: put log in an increasing order: one signature, two signatures etc.
+//           put short delay log first and long the second
+vector<vector<string>> DSRC_LOGS = {{string(ONE_SIGNATURE_SHORT_DELAY_LOG),
+                                     string(ONE_SIGNATURE_LONG_DELAY_LOG)},
+                                    {string(TWO_SIGNATURES_SHORT_DELAY_LOG)},
+                                    {string(THREE_SIGNATURES_SHORT_DELAY_LOG)},
+                                    {string(FOUR_SIGNATURES_SHORT_DELAY_LOG)},
+                                    {string(FIVE_SIGNATURES_SHORT_DELAY_LOG)},
+                                    {string(SIX_SIGNATURES_SHORT_DELAY_LOG)},
+                                    {string(SEVEN_SIGNATURES_SHORT_DELAY_LOG)},
+                                    {string(EIGHT_SIGNATURES_SHORT_DELAY_LOG),
+                                     string(EIGHT_SIGNATURES_LONG_DELAY_LOG)}};
+
+void initialize() {
+  for (unsigned int i = 0; i < DSRC_LOGS.size(); ++i) {
+    delay_data.push_back(vector<vector<double>>());
+    pointer.push_back(vector<unsigned int>());
+    for (unsigned int j = 0; j < DSRC_LOGS[i].size(); ++j) {
+      pointer[i].push_back(0);
+      vector<double> data;
+      ifstream infile;
+      string file_name = string(DSRC_LOG_FOLDER) + "/" + DSRC_LOGS[i][j];
+      infile.open(file_name.c_str());
+      if (!infile) {
+        printf("Failed to read file\n");
+        exit(1);
+      }
+
+      double data_point = 0;
+      while (infile >> data_point) {
+        infile >> data_point;
+        data.push_back(data_point);
+      }
+
+      delay_data[i].push_back(move(data));
+    }
+  }
+  initialized = true;
+}
+
+double getDsrcDelayTimeBySigNumAndRange(unsigned int signature_num,
+                                        unsigned int range) {
+  unsigned int idx = pointer[signature_num - 1][range];
+  double delay = delay_data[signature_num - 1][range][idx];
+  pointer[signature_num - 1][range] =
+      (idx + 1) % delay_data[signature_num - 1][range].size();
+  if (delay > TIMEOUT_THRESHOLD) {
+    return PACKET_LOSS;
+  }
+  return delay;
+}
+
+double getDsrcDelayTime(unsigned int sender, unsigned int targetReceiver) {
+  if (!initialized) {
+    initialize();
+  }
+  if (targetReceiver != 0) {
+    return getDsrcDelayTimeBySigNumAndRange(sender + 1, SHORT_RANGE);
+  } else {
+    return getDsrcDelayTimeBySigNumAndRange(8, LONG_RANGE);
+  }
+}
 
 Define_Module(BaseApp);
 
@@ -337,8 +425,8 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             epkt->par(sig_name).setObjectValue(sig_message);
             // send the new ContractChain
             epkt->setRecipient((unsigned char)next);
-            double DSRC_delay_time = getDsrcDelayTime(
-                BaseProtocol::CONTRACT_TYPE, position, (unsigned int)next);
+            double DSRC_delay_time =
+                getDsrcDelayTime(position, (unsigned int)next);
             compute_time = compute_time + DSRC_delay_time;
             if (DSRC_delay_time > 0) {
               sendContractChain(epkt, compute_time);
@@ -499,8 +587,7 @@ void BaseApp::startNewContractChain() {
     return;
   }
   contract_chain->setRecipient(params.chain_order[1]);
-  double DSRC_delay_time = getDsrcDelayTime(BaseProtocol::CONTRACT_TYPE,
-                                            position, params.chain_order[1]);
+  double DSRC_delay_time = getDsrcDelayTime(position, params.chain_order[1]);
   compute_time = compute_time + DSRC_delay_time;
   // send contract chain down
   if (DSRC_delay_time > 0) {

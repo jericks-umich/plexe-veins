@@ -31,6 +31,28 @@
 
 #include "veins/modules/application/platooning/utilities/PositionHelper.h"
 
+#define DSRC_LOG_FOLDER "/tmp/results"
+#define ONE_SIGNATURE_SHORT_DELAY_LOG "1000_128_short.log"
+#define ONE_SIGNATURE_LONG_DELAY_LOG "1000_128_long.log"
+#define TWO_SIGNATURES_SHORT_DELAY_LOG "1000_192_short.log"
+#define THREE_SIGNATURES_SHORT_DELAY_LOG "1000_256_short.log"
+#define FOUR_SIGNATURES_SHORT_DELAY_LOG "1000_320_short.log"
+#define FIVE_SIGNATURES_SHORT_DELAY_LOG "1000_384_short.log"
+#define SIX_SIGNATURES_SHORT_DELAY_LOG "1000_448_short.log"
+#define SEVEN_SIGNATURES_SHORT_DELAY_LOG "1000_512_short.log"
+#define EIGHT_SIGNATURES_SHORT_DELAY_LOG "1000_576_short.log"
+#define EIGHT_SIGNATURES_LONG_DELAY_LOG "1000_576_long.log"
+#define SHORT_RANGE 0x0
+#define LONG_RANGE 0x1
+#define TIMEOUT_THRESHOLD 1
+#define PACKET_LOSS -1
+
+void initialize();
+
+double getDsrcDelayTime(unsigned int sender, unsigned int targetReceiver);
+
+double getDsrcDelayTimeBySigNumAndRange(unsigned int signature_num,
+                                        unsigned int range);
 class BaseProtocol;
 
 class BaseApp : public BaseApplLayer {
