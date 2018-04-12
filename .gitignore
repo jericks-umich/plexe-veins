@@ -20,3 +20,4 @@ tests/**/err.tmp
 examples/**/results
 examples/**/.tkenvrc
 examples/**/valgrind.out
+examples/**/.cmdenv-log
