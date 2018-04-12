@@ -430,6 +430,10 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             compute_time = compute_time + DSRC_delay_time;
             if (DSRC_delay_time > 0) {
               sendContractChain(epkt, compute_time);
+            } else {
+              // record that we're dropping a contract chain
+              printf("\n\nPacket dropped by vehicle %d\n\n\n", position);
+              contractChainDelayOut.record(-10 * position - 1);
             }
             delete_enc = false;
           }
@@ -592,6 +596,10 @@ void BaseApp::startNewContractChain() {
   // send contract chain down
   if (DSRC_delay_time > 0) {
     sendContractChain(contract_chain, compute_time);
+  } else {
+    // record that we're dropping a contract chain
+    printf("\n\nPacket dropped by vehicle %d\n\n\n", position);
+    contractChainDelayOut.record(-10 * position - 1);
   }
 }
 
