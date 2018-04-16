@@ -281,9 +281,10 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
     //       contract_chain.max_decel);
     // check whether we are the intended recipient
     if (epkt->getRecipient() == myId) {
-      // printf("Vehicle %d received Contract Packet!\n", myId);
+      // printf("Vehicle %d received Contract Packet at time %f\n", myId,
+      //       simTime().dbl());
       // make sure this message is still valid, otherwise ignore it
-      if (SimTime().dbl() < contract_chain.valid_time) {
+      if (simTime().dbl() < contract_chain.valid_time) {
         // printf("contract is still valid\n");
 
         // make sure this message is something this vehicle will accept (i.e. is
@@ -339,6 +340,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
           printf("Could not get enclave to sign new contract chain!\n");
           return;
         }
+        printf("Compute time: %f\n", compute_time);
         // printf("Got signature: 0x%x\n", *(unsigned int *)&new_signature);
 
         // if we're the leader and just received a completed normal chain, we
@@ -385,36 +387,6 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
             printf("Error: We did not find myId in chain_order! How did we get "
                    "this packet?\n");
           } else {
-            //// create new ContractChain with them as recipient
-            // ContractChain *new_contract_chain = new ContractChain();
-            // new_contract_chain->setRecipient((unsigned char)next);
-            // new_contract_chain->setContract_chain(contract_chain);
-            // ContractSignature *sig_message;
-            //// add all previous signatures to the new contract chain
-            // for (int i = 0; i < MAX_PLATOON_VEHICLES; i++) {
-            //  snprintf(sig_name, 6, "sig_%1d", i);
-            //  // try to get sig_%1d from epkt
-            //  obj_ref = arr.get(sig_name);
-            //  if (obj_ref != NULL) {    // if the i'th signature was attached
-            //    epkt->addPar(sig_name); // attach it here as well
-            //    // create a new instance of signature and attach it to the
-            //    chain
-            //    sig_message = new ContractSignature;
-            //    sig_message->setSignature(signatures[i]);
-            //    epkt->par(sig_name).setObjectValue(sig_message);
-            //  }
-            //}
-            //// add our new signature to the contract chain
-            // int position = positionHelper->getPosition();
-            // snprintf(sig_name, 6, "sig_%1d", position);
-            // epkt->addPar(sig_name);
-            //// create a new instance of signature and attach it to the chain
-            // sig_message = new ContractSignature;
-            // sig_message->setSignature(new_signature);
-            // epkt->par(sig_name).setObjectValue(sig_message);
-            //// send the new ContractChain
-            // sendContractChain(epkt);
-
             // reuse existing ContractChain after appending the new signature
             int position = positionHelper->getPosition();
             snprintf(sig_name, 6, "sig_%1d", position);
@@ -429,6 +401,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
                 getDsrcDelayTime(position, (unsigned int)next);
             compute_time = compute_time + DSRC_delay_time;
             if (DSRC_delay_time > 0) {
+              // printf("DSRC delay: %f\n", DSRC_delay_time);
               sendContractChain(epkt, compute_time);
             } else {
               // record that we're dropping a contract chain
