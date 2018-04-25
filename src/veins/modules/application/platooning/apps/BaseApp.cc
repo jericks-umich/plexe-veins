@@ -56,8 +56,10 @@ vector<vector<unsigned int>> pointer;
 // invariant: put log in an increasing order: one signature, two signatures etc.
 //           put short delay log first and long the second
 vector<vector<string>> DSRC_LOGS = {
-    {string(ONE_SIGNATURE_ONE_HOP_DELAY_LOG)},
-    {string(TWO_SIGNATURES_ONE_HOP_DELAY_LOG)},
+    {string(ONE_SIGNATURE_ONE_HOP_DELAY_LOG),
+     string(ONE_SIGNATURE_ONE_HOP_DELAY_LOG)},
+    {string(TWO_SIGNATURES_ONE_HOP_DELAY_LOG),
+     string(TWO_SIGNATURES_ONE_HOP_DELAY_LOG)},
     {string(THREE_SIGNATURES_ONE_HOP_DELAY_LOG),
      string(THREE_SIGNATURES_TWO_HOP_DELAY_LOG)},
     {string(FOUR_SIGNATURES_ONE_HOP_DELAY_LOG),
@@ -68,7 +70,8 @@ vector<vector<string>> DSRC_LOGS = {
      string(SIX_SIGNATURES_FIVE_HOP_DELAY_LOG)},
     {string(SEVEN_SIGNATURES_ONE_HOP_DELAY_LOG),
      string(SEVEN_SIGNATURES_SIX_HOP_DELAY_LOG)},
-    {string(EIGHT_SIGNATURES_SEVEN_HOP_DELAY_LOG)}};
+    {string(EIGHT_SIGNATURES_SEVEN_HOP_DELAY_LOG),
+     string(EIGHT_SIGNATURES_SEVEN_HOP_DELAY_LOG)}};
 
 void initialize() {
   for (unsigned int i = 0; i < DSRC_LOGS.size(); ++i) {
