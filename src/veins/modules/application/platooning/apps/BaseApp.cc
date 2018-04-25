@@ -347,7 +347,7 @@ void BaseApp::handleLowerMsg(cMessage *msg) {
           printf("Could not get enclave to sign new contract chain!\n");
           return;
         }
-        printf("Compute time: %f\n", compute_time);
+        // printf("Compute time: %f\n", compute_time);
         // printf("Got signature: 0x%x\n", *(unsigned int *)&new_signature);
 
         // if we're the leader and just received a completed normal chain, we
