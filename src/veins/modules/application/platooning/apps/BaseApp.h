@@ -31,17 +31,21 @@
 
 #include "veins/modules/application/platooning/utilities/PositionHelper.h"
 
-#define DSRC_LOG_FOLDER "/tmp/results"
-#define ONE_SIGNATURE_SHORT_DELAY_LOG "1000_128_short.log"
-#define ONE_SIGNATURE_LONG_DELAY_LOG "1000_128_long.log"
-#define TWO_SIGNATURES_SHORT_DELAY_LOG "1000_192_short.log"
-#define THREE_SIGNATURES_SHORT_DELAY_LOG "1000_256_short.log"
-#define FOUR_SIGNATURES_SHORT_DELAY_LOG "1000_320_short.log"
-#define FIVE_SIGNATURES_SHORT_DELAY_LOG "1000_384_short.log"
-#define SIX_SIGNATURES_SHORT_DELAY_LOG "1000_448_short.log"
-#define SEVEN_SIGNATURES_SHORT_DELAY_LOG "1000_512_short.log"
-#define EIGHT_SIGNATURES_SHORT_DELAY_LOG "1000_576_short.log"
-#define EIGHT_SIGNATURES_LONG_DELAY_LOG "1000_576_long.log"
+#define DSRC_LOG_FOLDER "/tmp/for_simulation"
+#define ONE_SIGNATURE_ONE_HOP_DELAY_LOG "1hop_128bytes.log"
+#define TWO_SIGNATURES_ONE_HOP_DELAY_LOG "1hop_192bytes.log"
+#define THREE_SIGNATURES_ONE_HOP_DELAY_LOG "1hop_256bytes.log"
+#define FOUR_SIGNATURES_ONE_HOP_DELAY_LOG "1hop_320bytes.log"
+#define FIVE_SIGNATURES_ONE_HOP_DELAY_LOG "1hop_384bytes.log"
+#define SIX_SIGNATURES_ONE_HOP_DELAY_LOG "1hop_448bytes.log"
+#define SEVEN_SIGNATURES_ONE_HOP_DELAY_LOG "1hop_512bytes.log"
+#define THREE_SIGNATURES_TWO_HOP_DELAY_LOG "2hop_256bytes.log"
+#define FOUR_SIGNATURES_THREE_HOP_DELAY_LOG "3hop_320bytes.log"
+#define FIVE_SIGNATURES_FOUR_HOP_DELAY_LOG "4hop_384bytes.log"
+#define SIX_SIGNATURES_FIVE_HOP_DELAY_LOG "5hop_448bytes.log"
+#define SEVEN_SIGNATURES_SIX_HOP_DELAY_LOG "6hop_512bytes.log"
+#define EIGHT_SIGNATURES_SEVEN_HOP_DELAY_LOG "7hop_576bytes.log"
+
 #define SHORT_RANGE 0x0
 #define LONG_RANGE 0x1
 #define TIMEOUT_THRESHOLD 1
